@@ -1,0 +1,80 @@
+-- Lấy người chơi và camera
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- Tạo GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Tạo nút ToggleButton
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 100, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -50, 0.1, 0) -- Đặt nút ở giữa màn hình, phía trên
+toggleButton.Text = "On"
+toggleButton.Parent = screenGui
+
+-- Biến để kiểm soát trạng thái
+local isAiming = false
+local aimRadius = 50 -- Bán kính ghim (đơn vị: studs)
+
+-- Tạo một label để hiển thị bán kính hiện tại (tuỳ chọn)
+local radiusLabel = Instance.new("TextLabel")
+radiusLabel.Size = UDim2.new(0, 200, 0, 50)
+radiusLabel.Position = UDim2.new(0.5, -100, 0.2, 0) -- Vị trí bên dưới nút
+radiusLabel.Text = "Radius: " .. tostring(aimRadius)
+radiusLabel.Parent = screenGui
+
+-- Hàm tìm người chơi gần nhất trong bán kính
+local function getClosestPlayerInRadius()
+    local closestPlayer = nil
+    local shortestDistance = aimRadius -- Chỉ tìm trong phạm vi bán kính
+
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (otherPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+            if distance < shortestDistance then
+                closestPlayer = otherPlayer
+                shortestDistance = distance
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- Hàm ghim camera vào người chơi gần nhất trong bán kính
+local function aimAtPlayer()
+    local closestPlayer = getClosestPlayerInRadius()
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        camera.CameraType = Enum.CameraType.Scriptable
+        camera.CFrame = CFrame.new(camera.CFrame.Position, closestPlayer.Character.HumanoidRootPart.Position)
+    end
+end
+
+-- Khi nhấn nút
+toggleButton.MouseButton1Click:Connect(function()
+    isAiming = not isAiming -- Chuyển đổi giữa On/Off
+    if isAiming then
+        toggleButton.Text = "Off"
+        -- Ghim camera vào người chơi gần nhất khi bật
+        game:GetService("RunService").RenderStepped:Connect(aimAtPlayer)
+    else
+        toggleButton.Text = "On"
+        -- Trở về chế độ camera bình thường khi tắt
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end)
+
+-- Hàm để tăng/giảm bán kính ghim (tuỳ chọn)
+local function updateRadius(delta)
+    aimRadius = math.clamp(aimRadius + delta, 10, 200) -- Giới hạn bán kính từ 10 đến 200 studs
+    radiusLabel.Text = "Radius: " .. tostring(aimRadius)
+end
+
+-- Tăng bán kính khi nhấn phím "UpArrow"
+player:GetMouse().KeyDown:Connect(function(key)
+    if key == "w" then
+        updateRadius(10) -- Tăng bán kính thêm 10 studs
+    elseif key == "s" then
+        updateRadius(-10) -- Giảm bán kính thêm 10 studs
+    end
+end)
