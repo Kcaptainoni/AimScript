@@ -1,0 +1,47 @@
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- 🏹 Hàm tìm người chơi gần nhất
+local function getNearestPlayer()
+    local closestPlayer = nil
+    local closestDistance = math.huge  -- Giá trị vô hạn để so sánh
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
+            local head = otherPlayer.Character.Head
+            local distance = (head.Position - camera.CFrame.Position).Magnitude
+            
+            if distance < closestDistance then
+                closestDistance = distance
+                closestPlayer = otherPlayer
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- 🔄 Cập nhật Camera theo người chơi gần nhất
+local function updateCamera()
+    local targetPlayer = getNearestPlayer()
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+        local head = targetPlayer.Character.Head
+        camera.CameraSubject = head
+        camera.CFrame = CFrame.new(camera.CFrame.Position, head.Position)
+    end
+end
+
+-- 🚀 Khi vào game, ghim vào người gần nhất
+task.wait(1)  -- Đợi một chút để mọi người load vào game
+updateCamera()
+
+-- 🎯 Liên tục cập nhật Camera
+RunService.RenderStepped:Connect(updateCamera)
+
+-- ☠️ Khi người chơi chết, tự động đổi mục tiêu
+player.CharacterRemoving:Connect(function()
+    task.wait(0.5)  -- Đợi nhân vật chết hẳn
+    updateCamera()  -- Ghim vào người gần nhất
+end)
